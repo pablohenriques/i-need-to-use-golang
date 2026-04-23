@@ -1,620 +1,718 @@
-# 🚀 Kotlin → Go: Guia de Transição para Projetos Profissionais
+# Guia de Transição: Kotlin → Golang
 
-> Direcionamento técnico para engenheiros **Kotlin/JVM** que vão construir **microsserviços ou BFFs em Go** em ambiente de produção.
-
----
-
-## 📖 Contexto
-
-Este não é um tutorial de sintaxe. É uma curadoria estratégica que cobre:
-
-1. **Trilha de estudos** prática, com fases, entregáveis e checkpoints.
-2. **Mapeamento de ferramentas** do universo Spring/Hibernate/Kafka → Go idiomático.
-3. **IDEs** com foco em **debug** e **conformidade de licenciamento**.
-4. **Estratégia de testes** (unitários, integração, testcontainers).
-5. **Boas práticas** para entregar em produção.
-6. **Arquitetura e design** (Clean Arch, Clean Code, padrões distribuídos).
-
-### 🤖 Instruções para IAs que leem este documento
-
-Este README é a **fonte única de verdade (SSOT)** do projeto. Ao interpretá-lo:
-
-- A **trilha de estudos** é sequencial — não pule fases.
-- O público-alvo já domina imutabilidade, null-safety, coroutines, DI, ORMs e mensageria. **Compare Go com Kotlin**, não com linguagens genéricas.
-- **Priorize idiomática Go** sobre replicar padrões Java. Não force IoC via reflection; prefira composição explícita.
-- Ao sugerir código ou bibliotecas, **use as listadas aqui**. Desvios exigem justificativa explícita.
-- "Projeto profissional" = microsserviço/BFF com observabilidade, testes, CI/CD e Clean Architecture.
-- **Nunca** recomende ferramenta paga sem explicitar licenciamento.
+> **Versão:** 1.0.0
+> **Última atualização:** Abril 2026
+> **Público-alvo:** Time de desenvolvimento de software profissional
+> **Propósito:** Guia estruturado de transição da linguagem Kotlin para Golang, com curadoria de ferramentas, padrões e estratégia de aprendizado por senioridade.
 
 ---
 
-## 🎓 1. Trilha de Estudos — Kotlin → Go
+## Sumário
 
-Quatro fases com duração estimada, entregáveis concretos e checkpoints de validação. **Só avance após o checkpoint.**
-
-### 🥚 Fase 1 — Fundamentos e Desprogramação (2 semanas, ~4h/dia)
-
-**Objetivo:** escrever Go idiomático básico sem "cheiro de Java".
-
-| Semana | Tópicos | Recursos |
-|---|---|---|
-| 1 | Sintaxe, tipos, structs, slices, maps, funções, pacotes, `go mod` | [A Tour of Go](https://go.dev/tour/) + [Go by Example](https://gobyexample.com/) |
-| 2 | Interfaces implícitas, error handling (`error` como valor), zero values, *pointer receivers* vs *value receivers*, *embedding* | *Learning Go* (Bodner) — cap. 1–8 |
-
-**Pontos de atrito para quem vem de Kotlin:**
-- Não existe null-safety. Existe *zero value* (`0`, `""`, `nil`) — modele estruturas considerando isso.
-- Sem `try/catch`: retornar `(result, error)` é convenção **obrigatória**.
-- Sem herança: composição via *embedding*. Não tente simular classes abstratas.
-- Interfaces são **implícitas**: se o tipo tem os métodos, ele **é** a interface. Acoplamento fraco de graça.
-
-**✅ Checkpoint da Fase 1:**
-> Escreva um **CLI em Go** que receba um arquivo CSV, valide colunas e exporte JSON. Use `flag`, `encoding/csv`, `encoding/json`, *table-driven tests*. Código revisado e aprovado por alguém sênior em Go.
+1. [Resumo Executivo](#1-resumo-executivo)
+2. [Instruções para Leitura por IA](#2-instruções-para-leitura-por-ia)
+3. [Pirâmide do Conhecimento Golang](#3-pirâmide-do-conhecimento-golang)
+4. [Patterns e Boas Práticas em Golang](#4-patterns-e-boas-práticas-em-golang)
+5. [Curadoria de Ferramentas de Teste](#5-curadoria-de-ferramentas-de-teste)
+6. [IDEs para Desenvolvimento Profissional](#6-ides-para-desenvolvimento-profissional)
 
 ---
 
-### 🐣 Fase 2 — APIs, Concorrência e Banco de Dados (3 semanas)
+## 1. Resumo Executivo
 
-**Objetivo:** construir uma API REST com persistência e concorrência idiomática.
+Este documento foi criado como guia oficial de transição tecnológica para times que migram de **Kotlin** (JVM) para **Golang** em projetos profissionais. Ele abrange:
 
-| Semana | Tópicos | Entregáveis |
-|---|---|---|
-| 3 | `net/http`, roteadores (Echo ou Chi), middleware, `context.Context`, validação | Endpoint CRUD simples |
-| 4 | Goroutines, channels, `sync.WaitGroup`, `errgroup`, *fan-in/fan-out*, *worker pools* | Worker que processa fila em paralelo |
-| 5 | `database/sql`, `pgx`, `sqlc`, migrations (`goose`), transações via `context` | CRUD persistido em Postgres |
+- Uma **pirâmide de conhecimento** dividida em três níveis — Júnior, Pleno e Sênior — com tópicos concretos que cada desenvolvedor deve dominar antes de avançar.
+- Uma **curadoria de design patterns e system patterns** aplicáveis a projetos Golang do zero, com descrições que permitem gerar exemplos práticos via IA.
+- Uma **curadoria de ferramentas de teste** cobrindo testes unitários, de integração, end-to-end e test containers, com orientações para geração de exemplos assistida por IA.
+- Uma **avaliação de 4 IDEs** profissionais com foco em debug e análise de código, incluindo prompts para aprofundamento via IA.
+- Um **protocolo de leitura por IA** que garante interpretação consistente por qualquer modelo de linguagem (Claude, Gemini, Copilot, entre outros).
 
-**Comparações-chave:**
-- `context.Context` ≈ mistura de `CoroutineContext` + `CancellationToken` + `MDC` — **propague em tudo**.
-- Goroutines são mais leves que coroutines do Kotlin, mas **não são gerenciadas** — você é responsável por evitar vazamentos.
-- `channels` ≈ `Channel` de coroutines; prefira-os a mutex sempre que representarem fluxo de dados.
-
-**✅ Checkpoint da Fase 2:**
-> API REST com 3 entidades, persistência real, 1 endpoint agregador que chama 2+ serviços em paralelo com `errgroup`, logs estruturados, graceful shutdown.
+O material não substitui a documentação oficial do Go. Ele funciona como mapa de navegação para que o time saiba **o que estudar, em que ordem, e com quais ferramentas**.
 
 ---
 
-### 🐓 Fase 3 — Produção (4 semanas)
+## 2. Instruções para Leitura por IA
 
-**Objetivo:** transformar API em microsserviço pronto para deploy.
+A seção abaixo é um prompt estruturado. Ela deve ser fornecida a qualquer modelo de linguagem (Claude, Gemini, Copilot ou outro) **antes** de fazer perguntas sobre este documento. Isso garante que a IA interprete o conteúdo de forma padronizada, sem inferências livres.
 
-| Semana | Tópicos | Entregáveis |
-|---|---|---|
-| 6 | Testes (unit + integração + testcontainers) — ver §4 | Suite de testes com ≥70% cobertura |
-| 7 | Observabilidade: `log/slog`, Prometheus, OpenTelemetry | Traces e métricas funcionando |
-| 8 | Clean Architecture aplicada, DI com `google/wire` ou manual | Refactor do projeto para camadas |
-| 9 | Docker multi-stage, CI com `golangci-lint`, `govulncheck`, `go test -race` | Pipeline verde, imagem `distroless` |
+### 2.1 Prompt para IA — Copie e use antes de enviar este documento
 
-**✅ Checkpoint da Fase 3:**
-> Microsserviço com Clean Arch, cobertura ≥70%, `/healthz` + `/readyz`, métricas Prometheus, traces OpenTelemetry, pipeline CI completo, imagem Docker < 25MB, `graceful shutdown` testado.
+```text
+CONTEXTO E REGRAS DE INTERPRETAÇÃO
 
----
+Você está recebendo um documento técnico chamado "Guia de Transição: Kotlin → Golang".
+Este documento é usado por um time de desenvolvimento profissional que está migrando
+de Kotlin para Golang. Siga rigorosamente as instruções abaixo ao responder qualquer
+pergunta sobre ele.
 
-### 🦅 Fase 4 — Especialização (contínuo)
+REGRAS OBRIGATÓRIAS:
 
-Não é sequencial — escolha conforme necessidade do projeto:
+1. FIDELIDADE AO DOCUMENTO
+   - Responda exclusivamente com base no conteúdo presente neste documento.
+   - Não invente, extrapole ou adicione informações que não estejam explicitamente escritas.
+   - Se a resposta não estiver no documento, diga: "Esta informação não consta no documento."
 
-- **Performance**: `pprof`, benchmarks, *escape analysis*, redução de GC pressure. Livro: *100 Go Mistakes* (Harsanyi).
-- **Distribuído**: Watermill, sagas, outbox, idempotency, circuit breakers — ver §7.
-- **Design de bibliotecas**: APIs estáveis, semver, minimalismo.
-- **Runtime Go**: scheduler, memory model, `sync/atomic`.
+2. ESTRUTURA DE SENIORIDADE
+   - O documento define três níveis: Júnior (base), Pleno (meio), Sênior (topo).
+   - Ao recomendar conteúdo ou responder dúvidas, sempre identifique a qual nível
+     o tópico pertence.
+   - Não misture conteúdo de níveis diferentes sem indicar claramente a transição.
 
-### 📚 Recursos consolidados
+3. GERAÇÃO DE EXEMPLOS
+   - Ao longo do documento existem seções marcadas como "Prompt para Geração de Exemplo".
+   - Quando o usuário pedir um exemplo sobre um desses tópicos, use o prompt fornecido
+     no documento como base para gerar o código ou a explicação.
+   - Os exemplos devem ser em Golang, idiomáticos, compiláveis e curtos (máximo 40 linhas,
+     salvo se o usuário pedir mais).
 
-- 📘 *The Go Programming Language* — Donovan & Kernighan (referência).
-- 📘 *Learning Go* (2ª ed.) — Jon Bodner (melhor para recém-chegados).
-- 📘 *100 Go Mistakes and How to Avoid Them* — Harsanyi (obrigatório após 3 meses).
-- 📘 *Let's Go* / *Let's Go Further* — Alex Edwards (prática de APIs).
-- 🌐 [Effective Go](https://go.dev/doc/effective_go), [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments).
-- 🌐 [threedots.tech](https://threedots.tech/) — Go + Clean Arch + DDD aplicados.
-- 🎓 [Exercism Go Track](https://exercism.org/tracks/go) para praticar idiomática.
+4. COMPARAÇÕES KOTLIN vs GOLANG
+   - Quando relevante, compare o conceito com o equivalente em Kotlin para facilitar
+     a transição do desenvolvedor.
+   - Use o formato: "Em Kotlin: [conceito]. Em Go: [conceito equivalente ou diferença]."
 
----
+5. FORMATO DE RESPOSTA
+   - Use tópicos curtos e diretos.
+   - Inclua trechos de código somente quando solicitado ou quando o documento indicar
+     um prompt de geração de exemplo.
+   - Cite a seção do documento de onde a informação foi extraída.
 
-## 🛠️ 2. Curadoria de Ferramentas — Ecossistema Java → Go
+6. FERRAMENTAS E IDEs
+   - As recomendações de ferramentas e IDEs são curadas. Não substitua por alternativas
+     não listadas no documento, a menos que o usuário peça explicitamente.
 
-Go rejeita "um framework para tudo". Você **compõe** bibliotecas pequenas.
+7. IDIOMA
+   - Responda no mesmo idioma da pergunta do usuário.
+   - O documento está em Português (Brasil), mas exemplos de código devem usar
+     nomenclatura em Inglês, seguindo convenções da linguagem Go.
+```
 
-### 🌐 2.1. Echo — Substitui Spring Boot / Spring MVC
+### 2.2 Como usar
 
-**Por quê:** roteamento rápido, middleware limpa, *binding* e *validation* embutidos. API estável, próxima de `net/http`, fácil para quem vem de Spring MVC.
-
-**Alternativas:**
-- **Chi**: minimalista, 100% compatível com `net/http`. Zero lock-in.
-- **Gin**: sintaxe quase idêntica à do Echo, mais popular.
-- **Fiber**: performance extrema, mas usa `fasthttp` — fora do ecossistema `net/http` padrão. Só se performance for requisito duro.
-
-**O que você perde e está tudo bem:**
-- Sem `@Autowired`: DI é explícita no `main.go` ou via [`google/wire`](https://github.com/google/wire) (geração de código, sem reflection).
-- Sem `@Transactional` mágico: transação é passada via `context.Context` ou parâmetro.
-
-### 🗄️ 2.2. sqlc — Substitui Hibernate / JPA (estrategicamente melhor)
-
-**Por quê:** você escreve SQL; `sqlc` gera Go type-safe a partir das queries. Sem ORM mágico, sem N+1 escondido, sem *lazy loading surprises*. Erro de SQL = erro de compilação.
-
-**Quando usar GORM em vez disso:** quando a equipe exigir ORM parecido com Hibernate (`associations`, `hooks`, `auto-migrate`). É a saída de menor atrito político — mas reintroduz opacidade e problemas clássicos de JPA.
-
-**Recomendação:** `sqlc` + [`pgx`](https://github.com/jackc/pgx) (driver Postgres de referência). Migrations com [`goose`](https://github.com/pressly/goose) ou [`golang-migrate`](https://github.com/golang-migrate/migrate) — equivalentes a Flyway/Liquibase.
-
-### 📬 2.3. Watermill — Substitui Spring Kafka / Spring AMQP
-
-**Por quê:** abstração sobre múltiplos brokers (Kafka, RabbitMQ, NATS, SQS, Redis Streams) com a mesma API de `Publisher`/`Subscriber`. Traz *retries*, *poison queue*, *outbox*, CQRS e Saga embutidos. Testa com broker *in-memory*.
-
-**Alternativas de baixo nível:**
-- Kafka: [`segmentio/kafka-go`](https://github.com/segmentio/kafka-go) (idiomático) ou [`confluent-kafka-go`](https://github.com/confluentinc/confluent-kafka-go) (binding de `librdkafka` — paridade com Java).
-- RabbitMQ: [`rabbitmq/amqp091-go`](https://github.com/rabbitmq/amqp091-go).
-
-**Regra:** um só broker com controle fino → driver nativo. Múltiplos brokers ou produtividade tipo Spring → Watermill.
+1. Abra a IA de sua preferência (Claude, Gemini, Copilot, ChatGPT).
+2. Cole o prompt da seção 2.1 como primeira mensagem.
+3. Em seguida, envie este documento completo (cole o conteúdo ou faça upload do arquivo).
+4. A partir daí, faça perguntas normalmente. A IA seguirá as regras definidas.
 
 ---
 
-## 💻 3. IDEs — Debug e Licenciamento
+## 3. Pirâmide do Conhecimento Golang
 
-> ⚠️ Uso de IDE comercial em empresa sem licença adequada é **infração contratual**. Valide com TI/jurídico antes de instalar.
+A pirâmide está organizada de forma que cada nível **depende do anterior**. Um desenvolvedor Pleno deve dominar tudo do nível Júnior antes de avançar. O mesmo vale para a transição Pleno → Sênior.
 
-### 🥇 GoLand (JetBrains)
+---
 
-- **Licença:** comercial paga. Empresa: licença por usuário. Pessoal: assinatura individual. Estudantes, professores e mantenedores OSS têm **licença gratuita** via [jetbrains.com/community](https://www.jetbrains.com/community/).
-- **🐞 Debug:** padrão-ouro. Delve integrado, *remote debug*, *conditional breakpoints*, *goroutine inspector*, debug de testes e benchmarks. **Se debug é crítico, é imbatível.**
+### 3.1 Base — Nível Júnior
 
-### 🥈 VS Code + Go Extension
+Fundamentos da linguagem e do ecossistema. O objetivo é que o desenvolvedor consiga escrever, compilar e testar código Go de forma autônoma.
 
-- **Licença:** VS Code é gratuito; o binário da Microsoft tem telemetria fechada. Em ambientes restritos use [**VSCodium**](https://vscodium.com/) — build sem telemetria, mesma extensão Go.
-- **🐞 Debug:** excelente via Delve. Breakpoints condicionais, *logpoints*, inspeção de goroutines. Interface menos polida que GoLand, mas cobre 95% dos casos.
+**Sintaxe e Estruturas Fundamentais**
 
-### 🥉 Neovim + gopls + nvim-dap
+- Declaração de variáveis (`var`, `:=`, constantes com `const` e `iota`)
+- Tipos primitivos: `int`, `float64`, `string`, `bool`, `byte`, `rune`
+- Estruturas de controle: `if`, `for`, `switch`, `select`
+- Funções: múltiplos retornos, funções variádicas, funções como valores
+- Ponteiros: `*` e `&`, diferença para referências Kotlin
 
-- **Licença:** Apache 2.0, gratuito, zero risco.
-- **Stack:** `gopls`, `nvim-lspconfig`, `nvim-dap` + `nvim-dap-go`, `mason.nvim`.
-- **🐞 Debug:** funcional via Delve. Setup inicial chato (30–60 min); depois, tão produtivo quanto VS Code. Recomendado para quem já domina Vim.
+**Diferença mental vinda do Kotlin**
 
-### 🧊 Zed
+- Go não tem classes, herança, generics tradicionais (generics foram adicionados no Go 1.18 com type parameters), nem exceções (`try/catch`). O tratamento de erros é explícito via retorno `(resultado, error)`.
+- Não há `null`. Existe o `nil`, que se aplica a ponteiros, slices, maps, channels, interfaces e funções.
+- Não existe `data class`. Em Go, usa-se `struct`.
 
-- **Licença:** GPL-3.0, gratuito (colaboração remota tem termos próprios).
-- **🐞 Debug:** suporte DAP (Delve) introduzido em 2024/25, ainda amadurecendo. Ótimo para edição + testes; para debug complexo diário, prefira GoLand ou VS Code.
+**Structs e Métodos**
 
-### 🪶 Cursor (bônus)
+- Definição de `struct` e composição (embedding) como alternativa a herança
+- Métodos com receiver (value receiver vs pointer receiver)
+- Quando usar ponteiro vs valor
 
-- **Licença:** freemium. Fork de VS Code + IA. ⚠️ **Envia contexto de código para LLMs** — valide política de dados corporativa antes de usar em projetos sensíveis.
-- **🐞 Debug:** herdado do VS Code, idêntico.
+**Coleções e Iteração**
 
-### 📊 Resumo
+- Arrays e Slices: criação, `append`, `copy`, slicing, capacidade vs tamanho
+- Maps: criação, leitura com verificação de existência (comma ok idiom)
+- Iteração com `range`
 
-| IDE | Custo | Risco de Licença/Dados | Debug |
+**Tratamento de Erros**
+
+- O padrão `if err != nil`
+- Criação de erros com `errors.New` e `fmt.Errorf` com `%w` para wrapping
+- `errors.Is` e `errors.As` para inspeção de erros
+
+**Pacotes e Módulos**
+
+- Estrutura de diretórios e convenção de nomes de pacotes
+- `go mod init`, `go mod tidy`, `go.sum`
+- Visibilidade por capitalização (exportado vs não-exportado)
+- Importação e organização de imports
+
+**Ferramentas Essenciais da CLI**
+
+- `go build`, `go run`, `go test`, `go fmt`, `go vet`
+- `go doc` para consulta de documentação local
+
+**Primeiro Contato com Testes**
+
+- Arquivos `_test.go` e função `TestXxx(t *testing.T)`
+- `t.Error`, `t.Fatal`, `t.Run` para subtestes
+- Executar testes com `go test ./...`
+
+---
+
+### 3.2 Meio — Nível Pleno
+
+Domínio de concorrência, interfaces, padrões de projeto e capacidade de estruturar projetos reais.
+
+**Interfaces e Polimorfismo**
+
+- Interfaces implícitas: qualquer tipo que implementa os métodos satisfaz a interface
+- Interface vazia `any` (alias para `interface{}`) e type assertions
+- Type switch para despacho por tipo
+- Interfaces pequenas e compostas (princípio do Go: "Accept interfaces, return structs")
+- Comparação com interfaces Kotlin: em Kotlin, a implementação é explícita (`class X : Interface`); em Go, é implícita (duck typing)
+
+**Concorrência**
+
+- Goroutines: lançamento com `go`, custo de memória (~2KB por goroutine)
+- Channels: buffered vs unbuffered, direção (`chan<-`, `<-chan`)
+- `select` para multiplexação de channels
+- Padrões: fan-in, fan-out, pipeline, worker pool
+- `sync.WaitGroup`, `sync.Mutex`, `sync.RWMutex`, `sync.Once`
+- `context.Context`: cancelamento, timeout, deadline, propagação de valores
+- Comparação com Kotlin: Coroutines do Kotlin são cooperativas e baseadas em suspensão; Goroutines são preemptivas e gerenciadas pelo runtime do Go
+
+**Generics (Go 1.18+)**
+
+- Type parameters em funções e tipos
+- Constraints: `any`, `comparable`, constraints customizadas
+- Quando usar e quando evitar (Go favorece simplicidade sobre abstração)
+
+**Organização de Projeto**
+
+- Estrutura de diretórios: `cmd/`, `internal/`, `pkg/` (quando faz sentido)
+- Separação por domínio vs separação por camada técnica
+- O anti-pattern de excesso de pacotes vs pacotes muito grandes
+
+**Trabalho com JSON e HTTP**
+
+- `encoding/json`: tags de struct, `Marshal`, `Unmarshal`, `json.Decoder`
+- `net/http`: handlers, middleware, `http.ServeMux` (Go 1.22+ com routing melhorado)
+- Frameworks opinados vs biblioteca padrão: quando cada abordagem vale
+
+**Testes Intermediários**
+
+- Table-driven tests (padrão idiomático do Go)
+- Mocks manuais via interfaces
+- `httptest` para testes de handlers HTTP
+- `testify` para asserções e mocks
+
+**Logging e Observabilidade Básica**
+
+- `log/slog` (structured logging, Go 1.21+)
+- Diferença conceitual do SLF4J/Logback do mundo Kotlin/JVM
+
+---
+
+### 3.3 Topo — Nível Sênior
+
+Arquitetura, performance, resiliência e decisões de design em escala.
+
+**Design de APIs e Contratos**
+
+- Design de APIs RESTful idiomáticas em Go
+- gRPC com Protocol Buffers: definição de serviços, geração de código, streaming
+- Versionamento de API e backward compatibility
+- Middleware chains e composição de handlers
+
+**Performance e Profiling**
+
+- `pprof`: CPU profiling, memory profiling, goroutine profiling
+- `go tool trace` para análise de concorrência
+- Benchmark tests com `testing.B`
+- Escape analysis: entender quando o compilador aloca no heap vs stack
+- Redução de alocações: reutilização com `sync.Pool`, pré-alocação de slices
+
+**Padrões Avançados de Concorrência**
+
+- Graceful shutdown com `context` e `os/signal`
+- Rate limiting com `golang.org/x/time/rate`
+- Circuit breaker e retry com backoff exponencial
+- Semáforos com channels buffered
+- Leak detection de goroutines em testes
+
+**Resiliência e Operações**
+
+- Health checks, readiness e liveness probes
+- Métricas com Prometheus (`prometheus/client_golang`)
+- Tracing distribuído com OpenTelemetry
+- Feature flags e deploy progressivo (canary, blue-green)
+
+**Segurança**
+
+- Sanitização de inputs
+- Gerenciamento de segredos (nunca em código)
+- TLS, CORS, rate limiting, autenticação/autorização (JWT, OAuth2)
+- Análise estática de segurança com `gosec`
+
+**Decisões Arquiteturais**
+
+- Monolito modular vs microserviços: critérios de decisão
+- Event-driven architecture com mensageria (Kafka, NATS, RabbitMQ)
+- CQRS e Event Sourcing: quando aplicar
+- Database per service vs shared database
+
+**Code Review e Qualidade**
+
+- `golangci-lint` com configuração customizada
+- Documentação com `godoc` e exemplos testáveis (`Example` functions)
+- Dependency injection manual vs frameworks (Wire, fx)
+- Estratégia de versionamento semântico para bibliotecas internas
+
+---
+
+## 4. Patterns e Boas Práticas em Golang
+
+Esta seção apresenta uma curadoria de patterns relevantes para um projeto Go do zero. Cada pattern inclui uma descrição contextualizada e um prompt que pode ser usado para gerar exemplos via IA.
+
+---
+
+### 4.1 Design Patterns
+
+#### 4.1.1 Functional Options
+
+Padrão idiomático do Go para configuração flexível de structs sem precisar de builders ou construtores com dezenas de parâmetros. Usa funções como argumentos variádicos para aplicar configurações opcionais.
+
+Em Kotlin, o equivalente seria um builder pattern ou named arguments com valores default. Em Go, Functional Options é a solução aceita pela comunidade.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go do pattern Functional Options. Crie um struct "Server"
+com campos Host, Port e Timeout. Implemente 3 option functions: WithHost,
+WithPort e WithTimeout. Inclua uma função construtora NewServer que aceita
+options variádicas. Mostre o uso com e sem opções. Máximo 35 linhas.
+```
+
+#### 4.1.2 Repository Pattern
+
+Abstração da camada de persistência via interface. Permite trocar a implementação concreta (PostgreSQL, MongoDB, in-memory) sem alterar a lógica de negócio. Em Go, isso é feito com interfaces pequenas e injeção de dependência manual.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go do Repository Pattern. Defina uma interface UserRepository
+com métodos FindByID, Save e Delete. Implemente uma versão in-memory usando map.
+Mostre uma função de serviço que recebe a interface como dependência. Máximo 40 linhas.
+```
+
+#### 4.1.3 Strategy Pattern
+
+Define uma família de algoritmos encapsulados em funções ou interfaces, permitindo trocar o comportamento em tempo de execução. Em Go, é comum implementar com interfaces de um único método ou com `func` types.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go do Strategy Pattern usando func types. Crie um tipo
+PricingStrategy func(basePrice float64) float64. Implemente 3 estratégias:
+RegularPricing, DiscountPricing e PremiumPricing. Mostre uma função
+CalculateTotal que recebe a estratégia como parâmetro. Máximo 30 linhas.
+```
+
+#### 4.1.4 Decorator / Middleware Pattern
+
+Encapsulamento de comportamento adicional (logging, autenticação, métricas) ao redor de uma função ou handler sem modificar seu código original. Em Go, o padrão de middleware HTTP é o exemplo canônico.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go do Middleware Pattern para HTTP. Crie dois middlewares:
+LoggingMiddleware (que loga método e path) e AuthMiddleware (que verifica um
+header "X-API-Key"). Mostre como compor os middlewares ao redor de um handler
+usando a assinatura func(http.Handler) http.Handler. Máximo 40 linhas.
+```
+
+#### 4.1.5 Factory Pattern
+
+Criação de objetos sem expor a lógica de construção. Em Go, é implementado com funções construtoras (`NewXxx`) que retornam interfaces, ocultando a implementação concreta.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go do Factory Pattern. Defina uma interface Notifier com
+método Send(message string) error. Implemente EmailNotifier e SlackNotifier.
+Crie uma função NewNotifier(channel string) Notifier que retorna a
+implementação correta com base no argumento. Máximo 35 linhas.
+```
+
+---
+
+### 4.2 System Patterns
+
+#### 4.2.1 Circuit Breaker
+
+Protege o sistema contra chamadas repetidas a serviços degradados. Quando o número de falhas excede um limiar, o circuito "abre" e rejeita chamadas por um período, evitando cascata de falhas. Depois de um tempo, tenta novamente (half-open).
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo simplificado em Go de um Circuit Breaker. Implemente um struct
+CircuitBreaker com estados Closed, Open e HalfOpen. Inclua campos para
+maxFailures, timeout e contadores. Implemente um método Execute que recebe uma
+func() error e controla a transição de estados. Máximo 50 linhas.
+Não use bibliotecas externas.
+```
+
+#### 4.2.2 Retry com Backoff Exponencial
+
+Reexecuta operações que falharam com intervalos crescentes entre tentativas, evitando sobrecarregar o serviço remoto. Pode incluir jitter (variação aleatória) para evitar thundering herd.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de uma função Retry com backoff exponencial e jitter.
+A função deve receber: a operação (func() error), número máximo de tentativas
+e o intervalo base. Use time.Sleep entre tentativas. Máximo 25 linhas.
+```
+
+#### 4.2.3 Graceful Shutdown
+
+Permite que a aplicação finalize requisições em andamento antes de encerrar o processo, respondendo a sinais do sistema operacional (SIGTERM, SIGINT). Essencial para ambientes containerizados (Kubernetes).
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de Graceful Shutdown para um servidor HTTP. Use
+os/signal para capturar SIGINT e SIGTERM. Use context.WithTimeout para dar
+um prazo de 10 segundos para conexões finalizarem. Inclua o fluxo completo:
+iniciar servidor em goroutine, aguardar sinal, chamar server.Shutdown(ctx).
+Máximo 35 linhas.
+```
+
+#### 4.2.4 Health Check Pattern
+
+Expõe endpoints que indicam se a aplicação está viva (liveness) e pronta para receber tráfego (readiness). Orquestradores como Kubernetes usam esses endpoints para decidir se devem reiniciar ou rotear tráfego para o pod.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de Health Check com dois endpoints: /healthz (liveness,
+sempre retorna 200) e /readyz (readiness, verifica conexão com banco de dados
+simulado). Use net/http padrão. Inclua um struct HealthChecker com método
+CheckDB() error. Máximo 35 linhas.
+```
+
+---
+
+### 4.3 Boas Práticas Gerais
+
+**Tratamento de Erros** — Sempre trate erros explicitamente. Nunca use `_` para ignorar um `error` retornado, exceto em casos documentados e justificados. Use `fmt.Errorf("contexto: %w", err)` para adicionar contexto preservando a cadeia de erros.
+
+**Naming** — Nomes curtos e descritivos. Variáveis de escopo curto podem ser abreviadas (`r` para reader, `w` para writer). Nomes de pacotes são singulares e lowercase, sem underscores. Acrônimos ficam em caixa consistente (`HTTPClient`, não `HttpClient`).
+
+**Composição sobre herança** — Go não tem herança. Use embedding de structs para reutilização e interfaces pequenas para polimorfismo. Prefira interfaces de 1-2 métodos.
+
+**Concorrência segura** — Não compartilhe memória; comunique-se via channels. Se usar memória compartilhada, proteja com `sync.Mutex`. Passe `context.Context` como primeiro parâmetro de funções que podem ser canceladas.
+
+**Dependências** — Mantenha o `go.mod` limpo. Avalie bibliotecas externas criticamente: a stdlib do Go é muito completa. Prefira soluções da biblioteca padrão quando a diferença de funcionalidade for marginal.
+
+---
+
+## 5. Curadoria de Ferramentas de Teste
+
+### 5.1 Testes Unitários
+
+#### 5.1.1 testing (biblioteca padrão)
+
+O pacote `testing` é a base de todo teste em Go. Não requer instalação e é integrado ao toolchain. Arquivos de teste terminam com `_test.go` e funções de teste começam com `Test`. Suporta subtestes (`t.Run`), testes paralelos (`t.Parallel`) e benchmarks (`testing.B`).
+
+A prática idiomática em Go é usar **table-driven tests**: uma slice de structs com inputs e outputs esperados, iterada com `t.Run`.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de table-driven test usando apenas o pacote testing.
+Teste uma função Divide(a, b float64) (float64, error) que retorna erro para
+divisão por zero. Inclua pelo menos 4 casos de teste na tabela, incluindo o
+caso de erro. Use t.Run para subtestes nomeados. Máximo 35 linhas.
+```
+
+#### 5.1.2 testify
+
+Biblioteca de terceiros (`github.com/stretchr/testify`) que fornece asserções legíveis (`assert.Equal`, `assert.NoError`, `assert.Contains`) e suíte de mocks. Reduz boilerplate em comparação ao `testing` puro.
+
+Possui dois pacotes principais: `assert` (não interrompe o teste em caso de falha) e `require` (interrompe imediatamente).
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go usando testify/assert e testify/require. Teste a mesma
+função Divide do exemplo anterior, mas agora usando assert.Equal para validar
+resultados e require.NoError para validar ausência de erro. Mostre a diferença
+entre assert (continua) e require (para). Máximo 30 linhas.
+```
+
+#### 5.1.3 gomock / mockgen
+
+Ferramenta oficial do Go (`go.uber.org/mock`) para geração automática de mocks a partir de interfaces. Usa `mockgen` para gerar código e `gomock.Controller` para validar expectativas de chamadas durante o teste.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go usando gomock. Defina uma interface EmailSender com
+método Send(to, body string) error. Mostre: (1) o comando mockgen para gerar
+o mock, (2) um teste que configura expectativa com EXPECT().Send() e verifica
+que o serviço chama o sender corretamente. Máximo 35 linhas de código Go
+(exclua o output do mockgen).
+```
+
+---
+
+### 5.2 Testes de Integração
+
+#### 5.2.1 Build Tags para Separação
+
+Go permite separar testes de integração dos unitários usando build tags. A convenção é adicionar `//go:build integration` no topo do arquivo e executar com `go test -tags=integration ./...`. Isso evita que testes lentos rodem no ciclo rápido de desenvolvimento.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de teste de integração usando build tags. Crie um arquivo
+user_repository_integration_test.go com a tag //go:build integration. O teste
+deve conectar a um banco de dados (pode simular com um map global), inserir um
+registro e consultar. Mostre o comando para executar apenas os testes de
+integração. Máximo 30 linhas.
+```
+
+#### 5.2.2 httptest
+
+Pacote da biblioteca padrão que cria servidores HTTP reais em loopback para testes. Permite testar clientes HTTP contra servidores mock sem abrir portas reais na rede.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go usando httptest.NewServer para testar um cliente HTTP.
+Crie um servidor mock que retorna um JSON de usuário. Implemente um
+UserClient com método GetUser(id string) que faz GET ao servidor. Teste
+que o client parseia a resposta corretamente. Máximo 35 linhas.
+```
+
+---
+
+### 5.3 Testes End-to-End (E2E)
+
+#### 5.3.1 Estratégia para E2E em Go
+
+Testes E2E em Go geralmente são executados como testes de integração com build tags separadas (`//go:build e2e`). A aplicação é iniciada como subprocesso ou via `httptest.Server` com o router completo configurado. As asserções são feitas via chamadas HTTP reais ao servidor.
+
+Para testes E2E que envolvem frontend ou fluxos de browser, ferramentas como **chromedp** (controle de Chrome headless via Go) ou **Playwright** (via CLI externa) podem ser integradas.
+
+**Prompt para Geração de Exemplo:**
+
+```text
+Gere um exemplo em Go de teste E2E. Inicie a aplicação completa usando
+httptest.NewServer com o router principal (pode ser um http.ServeMux com
+3 endpoints: POST /users, GET /users/{id}, GET /health). O teste deve:
+criar um usuário, recuperá-lo e validar os dados. Use a tag //go:build e2e.
+Máximo 50 linhas.
+```
+
+---
+
+### 5.4 Testcontainers
+
+#### 5.4.1 testcontainers-go
+
+Biblioteca (`github.com/testcontainers/testcontainers-go`) que gerencia containers Docker durante testes. Permite subir bancos de dados, filas, caches e qualquer serviço necessário com ciclo de vida atrelado ao teste. O container é criado antes do teste e destruído depois.
+
+Suporta módulos pré-configurados para PostgreSQL, MySQL, Redis, Kafka, MongoDB, entre outros.
+
+**Prompt para Geração de Exemplo — Básico:**
+
+```text
+Gere um exemplo em Go usando testcontainers-go para subir um container
+PostgreSQL durante um teste. Use o módulo postgres do testcontainers-go.
+O teste deve: iniciar o container, obter a connection string, conectar via
+database/sql com o driver pgx, criar uma tabela, inserir um registro e
+consultar. Limpe o container com defer. Máximo 45 linhas.
+```
+
+**Prompt para Geração de Exemplo — Avançado:**
+
+```text
+Gere um exemplo em Go usando testcontainers-go com Redis. Suba um container
+Redis, conecte usando go-redis, faça Set e Get de um valor. Mostre como
+configurar um timeout para o container e como usar testcontainers.CleanupContainer.
+Máximo 35 linhas.
+```
+
+---
+
+### 5.5 Resumo Comparativo de Ferramentas de Teste
+
+| Tipo de Teste | Ferramenta | Instalação | Quando Usar |
 |---|---|---|---|
-| **GoLand** | 💰 Pago | Baixo se licenciado | ⭐⭐⭐⭐⭐ |
-| **VS Code** | Grátis | Telemetria — use VSCodium se crítico | ⭐⭐⭐⭐ |
-| **Neovim** | Grátis | Nenhum | ⭐⭐⭐⭐ |
-| **Zed** | Grátis | Baixo | ⭐⭐⭐ (melhorando) |
-| **Cursor** | Freemium | ⚠️ Código vai para LLMs | ⭐⭐⭐⭐ |
+| Unitário | `testing` (stdlib) | Nenhuma | Sempre — base de toda suíte de testes |
+| Unitário | `testify` | `go get github.com/stretchr/testify` | Quando quiser asserções mais legíveis |
+| Unitário (mocks) | `gomock` | `go install go.uber.org/mock/mockgen` | Quando precisar de mocks gerados automaticamente |
+| Integração | `httptest` (stdlib) | Nenhuma | Testes de handlers e clientes HTTP |
+| Integração | Build tags | Nenhuma | Separar testes lentos dos rápidos |
+| E2E | `httptest` + router completo | Nenhuma | Testes de fluxo completo da API |
+| Containers | `testcontainers-go` | `go get github.com/testcontainers/testcontainers-go` | Testes com dependências reais (DB, cache, fila) |
 
 ---
 
-## 🧪 4. Estratégia de Testes
+## 6. IDEs para Desenvolvimento Profissional
 
-Em Go, **testes são cidadãos de primeira classe da stdlib**. A prática idiomática difere bastante do ecossistema Java — adote-a antes de trazer JUnit-isms.
-
-### 4.1. Pirâmide de testes recomendada
-
-```
-        /\
-       /E2E\       5%  — fluxos críticos, testcontainers ou ambiente real
-      /------\
-     /Integr. \   25% — handlers + DB real + brokers reais (testcontainers)
-    /----------\
-   /   Unit     \ 70% — lógica de domínio, puro, rápido
-  /--------------\
-```
-
-### 4.2. Testes unitários
-
-#### Biblioteca base: `testing` (stdlib)
-
-Suficiente para 90% dos casos. **Não adicione dependência sem motivo.** Padrão idiomático: ***table-driven tests*** com subtests.
-
-```go
-func TestDiscount(t *testing.T) {
-    tests := []struct {
-        name    string
-        price   float64
-        coupon  string
-        want    float64
-        wantErr error
-    }{
-        {"sem cupom", 100, "", 100, nil},
-        {"cupom válido 10%", 100, "SAVE10", 90, nil},
-        {"cupom inválido", 100, "XXX", 0, ErrInvalidCoupon},
-    }
-    for _, tc := range tests {
-        t.Run(tc.name, func(t *testing.T) {
-            got, err := ApplyDiscount(tc.price, tc.coupon)
-            if !errors.Is(err, tc.wantErr) {
-                t.Fatalf("erro = %v, want %v", err, tc.wantErr)
-            }
-            if got != tc.want {
-                t.Errorf("got %v, want %v", got, tc.want)
-            }
-        })
-    }
-}
-```
-
-#### Asserções — escolha **uma** linha
-
-| Biblioteca | Estilo | Quando escolher |
-|---|---|---|
-| **stdlib pura** (`t.Errorf`, `t.Fatalf`) | Verboso, explícito | Default. Sempre o mais idiomático. |
-| [`stretchr/testify`](https://github.com/stretchr/testify) | `assert.Equal(t, ...)`, `require.NoError(t, ...)` | Time grande vindo de JUnit. Use `require` para pré-condições; `assert` para verificações. |
-| [`matryer/is`](https://github.com/matryer/is) | `is.Equal(got, want)` — minimalista | Quem quer asserções curtas sem trazer testify inteiro. |
-
-**Regra:** escolha uma e **padronize**. Misturar testify e stdlib no mesmo repo é cheiro forte.
-
-#### Mocks e fakes
-
-- **Primeiro**, tente ***fakes escritos à mão***. Interfaces pequenas em Go tornam isso trivial e legível. Geralmente melhor que gerar mocks.
-- Quando a interface for grande ou volátil, gere mocks:
-  - [`uber-go/mock`](https://github.com/uber-go/mock) (fork mantido do antigo `golang/mock`, comando `mockgen`) — **padrão atual**.
-  - [`vektra/mockery`](https://github.com/vektra/mockery) — alternativa popular, sintaxe similar a `testify/mock`.
-- Evite `testify/mock` puro em projetos novos; geração de código é mais segura.
-
-#### Detecção de race conditions
-
-Sempre rode testes com `-race` no CI:
-
-```bash
-go test -race ./...
-```
-
-É o detector mais barato e mais importante do Go. **Falha de `-race` = bug de concorrência real**, não flakiness.
-
-### 4.3. Testes de integração
-
-Testam a aplicação junto com dependências (HTTP, DB, broker) — idealmente com infra real via testcontainers.
-
-#### HTTP: `httptest` (stdlib)
-
-Feito para testar handlers sem subir porta real:
-
-```go
-func TestGetUser(t *testing.T) {
-    req := httptest.NewRequest(http.MethodGet, "/users/42", nil)
-    rec := httptest.NewRecorder()
-    handler.ServeHTTP(rec, req)
-
-    if rec.Code != http.StatusOK {
-        t.Fatalf("status = %d", rec.Code)
-    }
-}
-```
-
-#### Organização: `testify/suite` ou subtests nativos
-
-- **Subtests nativos** (`t.Run`) cobrem a maioria dos casos — prefira-os.
-- [`testify/suite`](https://pkg.go.dev/github.com/stretchr/testify/suite) se a equipe precisar de `SetupSuite`/`TearDown` estilo JUnit — útil para cenários com setup custoso compartilhado.
-
-#### Golden files
-
-Para respostas grandes (JSON, HTML), compare com arquivo `.golden` gerado. Bibliotecas: [`sebdah/goldie`](https://github.com/sebdah/goldie) ou manual. Use `-update` para regenerar.
-
-#### Contract testing
-
-[`pact-go`](https://github.com/pact-foundation/pact-go) para *contract testing* entre microsserviços (equivalente ao Pact-JVM).
-
-### 4.4. Testcontainers — infraestrutura real em testes
-
-[`testcontainers-go`](https://github.com/testcontainers/testcontainers-go) é o equivalente direto do Testcontainers Java. **Substitui H2/HSQLDB/embedded Kafka** por instâncias Docker reais, efêmeras e isoladas.
-
-**Por que é superior a mocks/in-memory:**
-
-- Testa o **driver e o dialeto reais** (ex.: comportamento `JSONB`, triggers, `ON CONFLICT` no Postgres que H2 não reproduz).
-- Pega bugs de migração, índices e constraints antes da produção.
-- Mesmo contrato do Testcontainers Java — transição natural.
-
-**Módulos oficiais prontos:** Postgres, MySQL, MongoDB, Redis, Kafka, RabbitMQ, LocalStack, Elasticsearch, entre outros.
-
-**Exemplo — Postgres:**
-
-```go
-func setupPostgres(t *testing.T) *pgxpool.Pool {
-    ctx := context.Background()
-    container, err := postgres.Run(ctx,
-        "postgres:16-alpine",
-        postgres.WithDatabase("test"),
-        postgres.WithUsername("test"),
-        postgres.WithPassword("test"),
-        testcontainers.WithWaitStrategy(
-            wait.ForLog("database system is ready to accept connections").
-                WithOccurrence(2).WithStartupTimeout(30*time.Second),
-        ),
-    )
-    if err != nil {
-        t.Fatal(err)
-    }
-    t.Cleanup(func() { _ = container.Terminate(ctx) })
-
-    dsn, _ := container.ConnectionString(ctx, "sslmode=disable")
-    pool, err := pgxpool.New(ctx, dsn)
-    if err != nil {
-        t.Fatal(err)
-    }
-    // aplicar migrations aqui
-    return pool
-}
-```
-
-**Boas práticas com testcontainers:**
-
-- **Reaproveite containers** entre testes do mesmo pacote via `TestMain` — containers custam 1–3s cada.
-- Use [`tc-reuse`](https://golang.testcontainers.org/features/reuse/) ou *singleton pattern* para não recriar em cada teste.
-- Separe testes de integração com *build tag*:
-
-```go
-//go:build integration
-
-package user_test
-```
-
-Execute com `go test -tags=integration ./...` — evita rodar em cada `go test` local.
-
-### 4.5. Benchmarks
-
-Suporte nativo em `testing.B`:
-
-```go
-func BenchmarkParseJSON(b *testing.B) {
-    data := []byte(`{"id":1,"name":"x"}`)
-    b.ResetTimer()
-    for i := 0; i < b.N; i++ {
-        _ = json.Unmarshal(data, &User{})
-    }
-}
-```
-
-Rode com `go test -bench=. -benchmem`. Compare versões com [`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) — mostra significância estatística.
-
-### 4.6. Fuzz testing (Go 1.18+)
-
-Nativo na stdlib. Excelente para parsers, validadores e qualquer entrada não-confiável:
-
-```go
-func FuzzParse(f *testing.F) {
-    f.Add("válido")
-    f.Fuzz(func(t *testing.T, in string) {
-        _, _ = Parse(in) // não deve entrar em pânico
-    })
-}
-```
-
-Rode com `go test -fuzz=FuzzParse`.
-
-### 4.7. BDD e property-based (opcional)
-
-- **BDD estilo Cucumber:** [`cucumber/godog`](https://github.com/cucumber/godog) — só adote se produto/QA escrevem features em Gherkin.
-- **BDD estilo Spock/RSpec:** [`ginkgo`](https://github.com/onsi/ginkgo) + [`gomega`](https://github.com/onsi/gomega). Popular no Kubernetes. Não-idiomático na maioria dos projetos — avalie o custo.
-- **Property-based** (estilo QuickCheck): [`leanovate/gopter`](https://github.com/leanovate/gopter). Útil em código de domínio matemático ou parsers.
-
-### 4.8. Cobertura
-
-Nativo:
-
-```bash
-go test -coverprofile=cover.out ./...
-go tool cover -html=cover.out    # abre no browser
-go tool cover -func=cover.out    # resumo no terminal
-```
-
-Metas razoáveis: **≥80% no domínio, ≥70% global**. Persegua **testes significativos**, não porcentagem.
-
-### 4.9. Checklist de testes no CI
-
-- [ ] `go test -race ./...` passa
-- [ ] `go test -tags=integration ./...` passa (com Docker disponível)
-- [ ] Cobertura de domínio ≥80%
-- [ ] `go vet ./...` sem alertas
-- [ ] Fuzz tests rodam por tempo fixo em nightly
-- [ ] Benchmarks críticos comparados com `benchstat` em PRs de performance
-
-### 4.10. Resumo de ferramentas de teste
-
-| Categoria | Ferramenta | Quando usar |
-|---|---|---|
-| Framework base | `testing` (stdlib) | Sempre |
-| Asserções | `testify/assert+require` **ou** `matryer/is` | Padronize uma |
-| Mocks | `uber-go/mock` ou `mockery` | Interfaces grandes; prefira fakes manuais antes |
-| HTTP handlers | `httptest` (stdlib) | Sempre |
-| Integração com infra | `testcontainers-go` | Postgres, Kafka, Redis, etc. |
-| Organização | subtests nativos; `testify/suite` se precisar | Default: nativos |
-| Golden files | `sebdah/goldie` | Respostas grandes estáveis |
-| Contract testing | `pact-go` | Contratos entre microsserviços |
-| Fuzz | `testing.F` (stdlib) | Parsers, validadores |
-| Benchmarks | `testing.B` + `benchstat` | Código hot-path |
-| Property-based | `leanovate/gopter` | Domínio matemático |
-| BDD | `godog` (Cucumber) | Só se QA escreve Gherkin |
+As quatro IDEs abaixo foram selecionadas por oferecerem suporte robusto a Go, incluindo ferramentas de debug integradas, análise estática de código e produtividade para times profissionais.
 
 ---
 
-## 🏗️ 5. Estrutura e Boas Práticas de Projeto
+### 6.1 GoLand (JetBrains)
 
-### 5.1. Layout
+**Descrição:** IDE dedicada para Go da JetBrains. Oferece a experiência mais completa e pronta para uso, sem necessidade de configurar extensões. Inclui debugger gráfico baseado em Delve, profiler integrado, refatoração avançada, navegação por código, suporte a testes com UI gráfica e integração com banco de dados.
 
-Inspirado em [`golang-standards/project-layout`](https://github.com/golang-standards/project-layout), **adaptado ao tamanho**:
+**Destaques para Debug:** Breakpoints condicionais, watchpoints em variáveis, inspeção de goroutines em tempo real, avaliação de expressões durante pausa, debug remoto via SSH ou Docker, e debug de testes diretamente pelo ícone de execução no editor.
 
-```
-meu-servico/
-├── cmd/
-│   └── api/                  # um main.go por binário
-├── internal/                 # código privado (bloqueado pelo compilador)
-│   ├── domain/               # entidades, VOs, regras puras
-│   ├── application/          # use cases
-│   ├── infrastructure/       # HTTP, DB, messaging
-│   └── platform/             # logger, config, telemetry
-├── pkg/                      # apenas se for biblioteca pública
-├── api/                      # OpenAPI, proto, schemas
-├── migrations/               # SQL migrations
-├── deployments/              # Dockerfile, k8s
-├── go.mod
-└── go.sum
+**Licença:** Comercial (30 dias trial, licença paga individual ou empresa).
+
+**Contexto para quem vem do Kotlin:** Se o time já usa IntelliJ IDEA para Kotlin, GoLand terá a mesma interface e atalhos, eliminando curva de adaptação na IDE.
+
+**Prompt para Geração de Exemplo — Debug Simples:**
+
+```text
+Descreva passo a passo como fazer debug de uma função Go no GoLand. A função
+recebe um slice de inteiros e retorna a soma. Mostre: como colocar um breakpoint,
+iniciar o debugger, inspecionar o valor de variáveis locais a cada iteração do
+loop e usar o painel "Variables". Inclua screenshots textuais (descrição do que
+aparece na tela) se possível. Foco no fluxo para um desenvolvedor acostumado
+com IntelliJ/Kotlin.
 ```
 
-Regras: tudo em `internal/` por padrão; `main.go` é o **único** ponto de *wiring*.
+**Prompt para Geração de Exemplo — Debug Complexo:**
 
-### 5.2. Configuração (12-Factor)
-
-- Env vars como fonte primária. Libs: [`caarlos0/env`](https://github.com/caarlos0/env) (declarativo) ou [`spf13/viper`](https://github.com/spf13/viper) (multi-fonte).
-- Segredos via Vault / Secrets Manager — **nunca no repo**.
-- Valide config no *startup*. **Fail-fast.**
-
-### 5.3. Context e graceful shutdown
-
-- Todo I/O recebe `context.Context` como 1º parâmetro.
-- Capture `SIGTERM`/`SIGINT` e drene conexões:
-
-```go
-ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-defer stop()
-// ... server.ListenAndServe em goroutine ...
-<-ctx.Done()
-shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-defer cancel()
-server.Shutdown(shutdownCtx)
+```text
+Descreva como debugar um cenário de race condition no GoLand. O cenário: 3
+goroutines incrementam um contador compartilhado sem mutex. Mostre: como usar
+o detector de race condition (-race flag), como colocar breakpoints em goroutines
+específicas, como usar o painel "Goroutines" para inspecionar o estado de cada
+goroutine, e como identificar o ponto de conflito. Inclua o comando de terminal
+equivalente para comparação.
 ```
-
-### 5.4. Erros
-
-- Valores de primeira classe, sempre tratados.
-- `fmt.Errorf("context: %w", err)` para envolver; `errors.Is`/`errors.As` para inspecionar.
-- *Sentinel errors* no domínio (`var ErrUserNotFound = errors.New(...)`); mapeamento para HTTP status **em um só lugar**.
-
-### 5.5. Observabilidade
-
-- **Logs:** `log/slog` (stdlib, Go 1.21+), JSON estruturado, com `correlation_id` propagado via `context`.
-- **Métricas:** `prometheus/client_golang` — métricas RED (Rate, Errors, Duration).
-- **Tracing:** OpenTelemetry (`go.opentelemetry.io/otel`).
-- **Health:** `/healthz` (liveness) e `/readyz` (readiness).
-
-### 5.6. Qualidade no CI
-
-Obrigatórios:
-
-- `gofmt -l .` (falha se houver diff)
-- `go vet ./...`
-- [`golangci-lint`](https://golangci-lint.run/) com `errcheck`, `gocritic`, `revive`, `gosec`, `staticcheck`.
-- `go test -race ./...`
-- [`govulncheck`](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) contra CVEs.
-
-### 5.7. Build e deploy
-
-- Dockerfile *multi-stage* com imagem final `distroless` ou `scratch`.
-- `CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w"` → binário estático < 25 MB.
-- Respeite `SIGTERM` no orquestrador.
-
-### 5.8. Documentação
-
-- README com setup local em < 5 minutos.
-- Contratos HTTP: OpenAPI + [`oapi-codegen`](https://github.com/deepmap/oapi-codegen) (gera client e server a partir do YAML).
-- ADRs (*Architecture Decision Records*) em `docs/adr/`.
 
 ---
 
-## 🎯 6. Clean Architecture e Clean Code em Go
+### 6.2 Visual Studio Code (VS Code) + Go Extension
 
-### 6.1. Camadas
+**Descrição:** Editor open-source da Microsoft com suporte a Go via extensão oficial (`golang.go`). A extensão instala automaticamente ferramentas como `gopls` (language server), `dlv` (debugger Delve), `staticcheck` (linter) e `goimports`. Excelente custo-benefício, com grande ecossistema de extensões adicionais.
 
+**Destaques para Debug:** Configuração via `launch.json`, breakpoints, step-in/out/over, inspeção de variáveis, debug de testes individuais com CodeLens, debug de aplicações em containers via Remote Development, e integração com terminal integrado.
+
+**Licença:** Gratuito e open-source.
+
+**Prompt para Geração de Exemplo — Debug Simples:**
+
+```text
+Descreva passo a passo como configurar e usar o debugger de Go no VS Code.
+Inclua: instalação da extensão Go, configuração do launch.json para um
+programa main.go, como colocar breakpoints, iniciar debug com F5 e inspecionar
+variáveis no painel lateral. Foco em um desenvolvedor que nunca usou o
+debugger do VS Code antes.
 ```
-┌──────────────────────────────────────────────────┐
-│  infrastructure/  HTTP, DB, Kafka, gRPC clients  │  adaptadores
-├──────────────────────────────────────────────────┤
-│  application/     Use Cases                      │  orquestração
-├──────────────────────────────────────────────────┤
-│  domain/          Entidades, VOs, regras         │  núcleo puro
-└──────────────────────────────────────────────────┘
-        Dependência sempre aponta para DENTRO
+
+**Prompt para Geração de Exemplo — Debug Complexo:**
+
+```text
+Descreva como debugar um servidor HTTP Go no VS Code. O servidor tem 3 endpoints.
+Mostre: configuração do launch.json para attach em processo rodando, como fazer
+debug de um request específico colocando breakpoint no handler, como inspecionar
+o http.Request e o ResponseWriter durante a pausa, e como usar conditional
+breakpoints para parar apenas quando um query parameter específico está presente.
 ```
 
-- `domain` importa só stdlib — zero HTTP, SQL, Kafka.
-- `application` define interfaces (portas); `infrastructure` as implementa.
-- DI manual no `main.go` ou via `google/wire` (geração de código, sem reflection).
+---
 
-### 6.2. Clean Code — idiomática primeiro
+### 6.3 Neovim + gopls + nvim-dap
 
-> Em Go, **idiomática > purismo de Clean Code**. Nem todo conselho do Uncle Bob se aplica.
+**Descrição:** Editor terminal altamente customizável, usado por desenvolvedores que preferem fluxo keyboard-driven. Com `gopls` (LSP), `nvim-dap` (Debug Adapter Protocol) e `nvim-dap-ui`, oferece uma experiência completa de desenvolvimento Go sem sair do terminal. Requer configuração inicial, mas resulta em um ambiente extremamente rápido.
 
-- Nomes **curtos em escopo curto** (`i`, `ctx`, `err` são corretos — renomear seria ruim).
-- Pacotes: `user`, `payment` (nunca `user_service`, `userservice`).
-- Funções: um nível de abstração; retorno cedo; sem `else` após `return`.
-- **Composição > Herança** (Go não oferece herança — caminho certo por default).
-- **Interfaces pequenas**: *"The bigger the interface, the weaker the abstraction"*. `io.Reader` tem um método.
-- **Sem getters/setters por default**; campos públicos quando não houver lógica.
+**Destaques para Debug:** Integração com Delve via DAP, breakpoints, step-through, inspeção de variáveis em floating windows, debug de testes via keybinding customizado, e REPL interativo do Delve acessível de dentro do Neovim.
+
+**Licença:** Gratuito e open-source.
+
+**Prompt para Geração de Exemplo — Debug Simples:**
+
+```text
+Descreva como configurar debug de Go no Neovim. Inclua: instalação de
+nvim-dap e nvim-dap-ui via lazy.nvim, configuração do adapter para Delve
+(dlv), mapeamento de teclas para toggle breakpoint, continue, step over e
+step into. Mostre o fluxo de debug de uma função simples que processa um
+slice. Inclua o trecho de configuração Lua necessário. Máximo 50 linhas de config.
+```
+
+**Prompt para Geração de Exemplo — Debug Complexo:**
+
+```text
+Descreva como debugar um teste de integração com testcontainers-go no Neovim
+usando nvim-dap. Mostre: como configurar o adapter para rodar testes
+específicos (equivalente ao dlv test), como definir breakpoints dentro do
+teste, como inspecionar o estado do container e da conexão ao banco durante
+a pausa. Inclua a configuração DAP necessária para este cenário.
+```
 
 ---
 
-## 🌐 7. Padrões para Microsserviços/BFF
+### 6.4 Zed
 
-| Padrão | Quando | Biblioteca |
-|---|---|---|
-| **Circuit Breaker** | Proteger contra falhas em cascata | [`sony/gobreaker`](https://github.com/sony/gobreaker) |
-| **Retry com backoff** | Falhas transientes | [`avast/retry-go`](https://github.com/avast/retry-go) |
-| **Bulkhead** | Isolar pools por dependência | `errgroup` + semáforos |
-| **Rate limiting** | Proteger o serviço e clientes | [`x/time/rate`](https://pkg.go.dev/golang.org/x/time/rate) |
-| **Idempotency key** | Escritas em APIs públicas | Manual + Redis/DB |
-| **Outbox** | Consistência DB ↔ broker | Watermill built-in |
-| **Saga** | Transações distribuídas | Watermill + orquestrador |
-| **CQRS** | Leitura/escrita divergentes | Watermill-CQRS |
-| **Cache-aside** | Reduzir latência | `go-redis/redis` |
-| **Graceful degradation** | BFF com múltiplos upstreams | `errgroup` + fallbacks |
+**Descrição:** Editor de código de nova geração focado em performance e colaboração, escrito em Rust. Tem suporte nativo a Go via `gopls`, com completions, diagnósticos e navegação rápida. Suporta debug via integração com DAP (Debug Adapter Protocol). Indicado para desenvolvedores que buscam uma alternativa moderna ao VS Code com menor consumo de recursos.
 
-### 7.1. BFF — design específico
+**Destaques para Debug:** Suporte a Delve via DAP, breakpoints, painel de variáveis, console de debug. A experiência de debug está em evolução ativa e melhora a cada release.
 
-- **Agregue**, não apenas faça proxy.
-- Chame upstreams **em paralelo** com `errgroup.WithContext` — BFF é I/O-bound.
-- Timeout agressivo por upstream (`context.WithTimeout`); o BFF tem seu próprio SLA.
-- Schema adaptado ao cliente (mobile ≠ web). Cada BFF serve um canal.
-- Esconda falhas parciais; sinalize degradação no payload.
+**Licença:** Gratuito e open-source.
 
-### 7.2. DDD leve
+**Prompt para Geração de Exemplo — Debug Simples:**
 
-- Linguagem ubíqua nos nomes (tipos e pacotes).
-- Agregados como unidades de transação (1 aggregate = 1 transação).
-- Repository pattern: interface no `application`, implementação no `infrastructure`.
+```text
+Descreva como configurar e usar o debug de Go no Zed. Inclua: verificação
+de que o language server gopls está ativo, configuração do debug adapter
+para Delve, como colocar breakpoints e iniciar uma sessão de debug de um
+programa main.go. Descreva os painéis disponíveis durante a sessão de debug.
+```
 
-### 7.3. Referências de design
+**Prompt para Geração de Exemplo — Debug Complexo:**
 
-- 📘 *Designing Data-Intensive Applications* — Kleppmann (obrigatório).
-- 📘 *Building Microservices* — Sam Newman.
-- 🌐 [microservices.io](https://microservices.io/) — catálogo de padrões.
-- 🌐 [threedots.tech](https://threedots.tech/) — Go + DDD + Clean Arch aplicados.
+```text
+Descreva como fazer debug de um worker pool em Go usando Zed. O cenário:
+5 goroutines consomem jobs de um channel e processam. Mostre como acompanhar
+a execução de goroutines individuais, como usar conditional breakpoints para
+pausar em um job específico e como inspecionar o estado do channel durante
+a pausa.
+```
 
 ---
 
-## ✅ Checklist de Produção
+### 6.5 Resumo Comparativo de IDEs
 
-- [ ] `go test -race ./...` verde em CI
-- [ ] `go test -tags=integration ./...` verde em CI (com Docker)
-- [ ] `golangci-lint run` sem erros
-- [ ] `govulncheck ./...` sem CVEs abertas
-- [ ] Cobertura ≥80% em domínio, ≥70% global
-- [ ] `/healthz` e `/readyz` respondendo
-- [ ] Logs JSON com `correlation_id`
-- [ ] Métricas Prometheus em `/metrics`
-- [ ] Traces OpenTelemetry emitidos
-- [ ] Graceful shutdown testado
-- [ ] Dockerfile *multi-stage* com `distroless`/`scratch`, < 25 MB
-- [ ] `context.Context` em 100% do I/O
-- [ ] Timeouts em todo cliente externo
-- [ ] Rate limiting nos endpoints públicos
-- [ ] OpenAPI publicado
-- [ ] README com setup em < 5 min
-- [ ] ADRs das decisões principais
+| IDE | Licença | Debug Integrado | Melhor Para |
+|---|---|---|---|
+| GoLand | Comercial | Completo (Delve, UI gráfica, profiler) | Times que já usam JetBrains e querem zero configuração |
+| VS Code | Gratuito | Completo (Delve via extensão, launch.json) | Versatilidade, grande ecossistema de extensões |
+| Neovim | Gratuito | Completo (Delve via nvim-dap, configuração manual) | Desenvolvedores keyboard-driven que querem máximo controle |
+| Zed | Gratuito | Em evolução (Delve via DAP) | Quem busca performance e uma alternativa moderna |
 
 ---
 
-## 📌 Nota Final
+## Apêndice: Referências Oficiais
 
-A transição de Kotlin para Go **não é tradução de sintaxe** — é mudança de filosofia. Go recompensa:
+- Documentação oficial do Go: https://go.dev/doc/
+- Effective Go: https://go.dev/doc/effective_go
+- Go Blog: https://go.dev/blog/
+- Go by Example: https://gobyexample.com/
+- Go Playground: https://go.dev/play/
+- Go Proverbs (Rob Pike): https://go-proverbs.github.io/
+- Testcontainers for Go: https://golang.testcontainers.org/
+- Delve Debugger: https://github.com/go-delve/delve
+- GoLand Docs: https://www.jetbrains.com/help/go/
+- VS Code Go Extension: https://marketplace.visualstudio.com/items?itemName=golang.Go
 
-- **Simplicidade explícita** sobre abstrações elegantes.
-- **Composição** sobre hierarquia.
-- **Erros como valores** sobre exceções.
-- **Código repetitivo e claro** sobre DSLs *clever*.
+---
 
-Use este documento como mapa. A cada sprint, revisite a trilha: **em que fase estou? o que falta para o próximo checkpoint?**
-
-Boa jornada. 🦫
+> **Nota final:** Este documento é um guia vivo. Atualize-o conforme o time evolui na adoção do Go. Os prompts de geração de exemplo foram escritos para serem usados com qualquer IA generativa e devem produzir resultados consistentes independentemente do modelo utilizado.
